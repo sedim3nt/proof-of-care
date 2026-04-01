@@ -8,6 +8,7 @@ import {
   CATEGORY_EMOJI,
   Category,
 } from '@/lib/mock-data';
+import { fetchAttestationsForAddress, CARE_SCHEMA_UID, BASE_SEPOLIA_EXPLORER, ParsedCareAttestation } from '@/lib/eas';
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -20,6 +21,10 @@ function shortAddress(addr: string) {
 function formatDate(dateStr: string) {
   const d = new Date(dateStr);
   return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+function formatTimestamp(ts: number): string {
+  return new Date(ts * 1000).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
 const GRADE_LABEL: Record<string, string> = {
@@ -44,9 +49,20 @@ export default async function ProfilePage({ params }: PageProps) {
     joinedDate: '2025-01-01',
   };
 
+  // Mock data for this address
   const attestationsReceived = MOCK_ATTESTATIONS.filter(a => a.to === address);
   const attestationsGiven = MOCK_ATTESTATIONS.filter(a => a.from === address);
-  const allAttestations = [...attestationsReceived, ...attestationsGiven];
+  const allMockAttestations = [...attestationsReceived, ...attestationsGiven];
+
+  // Live EAS attestations for this address
+  let liveAttestations: ParsedCareAttestation[] = [];
+  if (CARE_SCHEMA_UID) {
+    try {
+      liveAttestations = await fetchAttestationsForAddress(address, CARE_SCHEMA_UID);
+    } catch {
+      // fail silently
+    }
+  }
 
   const categoryEntries = Object.entries(profile.categoryBreakdown) as [Category, number][];
   const maxCategoryCount = Math.max(...categoryEntries.map(([, v]) => v), 1);
@@ -141,7 +157,7 @@ export default async function ProfilePage({ params }: PageProps) {
                   color: 'var(--text-primary)',
                   lineHeight: 1,
                 }}>
-                  {profile.totalAttestations}
+                  {profile.totalAttestations + liveAttestations.length}
                 </div>
                 <div style={{ fontFamily: 'Nunito', fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
                   Total Attestations
@@ -253,6 +269,7 @@ export default async function ProfilePage({ params }: PageProps) {
                 { label: 'Attestations given', value: attestationsGiven.length, emoji: '📤' },
                 { label: 'Bilateral confirmations', value: profile.bilateralCount, emoji: '🤝' },
                 { label: 'Care categories', value: categoryEntries.length, emoji: '🌈' },
+                ...(liveAttestations.length > 0 ? [{ label: 'On-chain attestations', value: liveAttestations.length, emoji: '⛓️' }] : []),
               ].map(stat => (
                 <div key={stat.label} style={{
                   display: 'flex',
@@ -274,7 +291,111 @@ export default async function ProfilePage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Attestation history */}
+        {/* Live attestations section */}
+        {liveAttestations.length > 0 && (
+          <div style={{ marginBottom: '32px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <h2 style={{
+                fontFamily: 'DM Serif Display, Georgia, serif',
+                fontSize: '24px',
+                color: 'var(--text-primary)',
+                margin: 0,
+              }}>
+                ⛓️ On-Chain Attestations
+              </h2>
+              <span style={{
+                fontFamily: 'Nunito',
+                fontSize: '12px',
+                color: '#06D6A0',
+                background: 'rgba(6, 214, 160, 0.1)',
+                padding: '4px 12px',
+                borderRadius: '100px',
+                border: '1px solid rgba(6, 214, 160, 0.2)',
+              }}>
+                Base Sepolia
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {liveAttestations.map((att) => (
+                <div key={att.uid} style={{
+                  padding: '20px',
+                  borderRadius: '16px',
+                  background: 'white',
+                  border: '1px solid rgba(6, 214, 160, 0.2)',
+                  boxShadow: '0 2px 8px rgba(6, 214, 160, 0.06)',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      <div style={{ fontFamily: 'monospace', fontSize: '12px', color: 'var(--text-muted)' }}>
+                        From: {shortAddress(att.attester)}
+                      </div>
+                      <div style={{ fontFamily: 'monospace', fontSize: '12px', color: 'var(--text-muted)' }}>
+                        To: {shortAddress(att.recipient)}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      {att.category && (
+                        <span style={{
+                          fontFamily: 'Nunito',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          color: 'var(--orange-primary)',
+                          background: 'var(--orange-ultralight)',
+                          padding: '3px 10px',
+                          borderRadius: '100px',
+                        }}>
+                          {att.category}
+                        </span>
+                      )}
+                      {att.bilateral && (
+                        <span style={{
+                          fontFamily: 'Nunito',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          color: '#06D6A0',
+                          background: 'rgba(6, 214, 160, 0.1)',
+                          padding: '3px 10px',
+                          borderRadius: '100px',
+                        }}>
+                          🤝 Bilateral
+                        </span>
+                      )}
+                      <span style={{ fontFamily: 'Nunito', fontSize: '12px', color: 'var(--text-muted)' }}>
+                        {formatTimestamp(att.time)}
+                      </span>
+                    </div>
+                  </div>
+                  {att.description && (
+                    <p style={{
+                      fontFamily: 'Nunito',
+                      fontSize: '14px',
+                      color: 'var(--text-secondary)',
+                      lineHeight: '1.6',
+                      margin: '0 0 12px 0',
+                    }}>
+                      {att.description}
+                    </p>
+                  )}
+                  <a
+                    href={`${BASE_SEPOLIA_EXPLORER}/tx/${att.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      fontFamily: 'monospace',
+                      fontSize: '11px',
+                      color: 'var(--text-muted)',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    tx: {att.txHash?.slice(0, 20)}… ↗
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Mock attestation history */}
         <div>
           <h2 style={{
             fontFamily: 'DM Serif Display, Georgia, serif',
@@ -285,7 +406,7 @@ export default async function ProfilePage({ params }: PageProps) {
             Attestation History
           </h2>
 
-          {allAttestations.length === 0 ? (
+          {allMockAttestations.length === 0 ? (
             <div style={{
               textAlign: 'center',
               padding: '60px 20px',
@@ -302,7 +423,7 @@ export default async function ProfilePage({ params }: PageProps) {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {allAttestations.map(att => (
+              {allMockAttestations.map(att => (
                 <AttestationCard key={att.id} attestation={att} />
               ))}
             </div>

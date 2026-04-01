@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import AttestationCard from '@/components/AttestationCard';
 import { MOCK_ATTESTATIONS, MOCK_PROFILES, CATEGORIES, CATEGORY_EMOJI, Category } from '@/lib/mock-data';
 import CareScore from '@/components/CareScore';
+import { fetchLiveAttestations, ParsedCareAttestation, CARE_SCHEMA_UID, BASE_SEPOLIA_EXPLORER } from '@/lib/eas';
 
 type Tab = 'attestations' | 'profiles';
 
@@ -12,11 +13,28 @@ function shortAddress(addr: string) {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 
+function timeAgo(timestamp: number): string {
+  const diff = Date.now() / 1000 - timestamp;
+  if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
+  return `${Math.round(diff / 86400)}d ago`;
+}
+
 export default function ExplorePage() {
   const [tab, setTab] = useState<Tab>('attestations');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | 'All'>('All');
   const [bilateralOnly, setBilateralOnly] = useState(false);
+  const [liveAttestations, setLiveAttestations] = useState<ParsedCareAttestation[]>([]);
+  const [liveLoading, setLiveLoading] = useState(false);
+
+  useEffect(() => {
+    if (!CARE_SCHEMA_UID) return;
+    setLiveLoading(true);
+    fetchLiveAttestations(CARE_SCHEMA_UID, 20)
+      .then(setLiveAttestations)
+      .finally(() => setLiveLoading(false));
+  }, []);
 
   const filteredAttestations = useMemo(() => {
     return MOCK_ATTESTATIONS.filter(att => {
@@ -95,6 +113,134 @@ export default function ExplorePage() {
 
         {tab === 'attestations' && (
           <>
+            {/* Live attestations section */}
+            {liveLoading && (
+              <div style={{
+                padding: '20px',
+                borderRadius: '16px',
+                background: 'rgba(6, 214, 160, 0.06)',
+                border: '1px solid rgba(6, 214, 160, 0.15)',
+                marginBottom: '32px',
+                fontFamily: 'Nunito',
+                fontSize: '14px',
+                color: 'var(--text-muted)',
+              }}>
+                ⛓️ Loading live attestations from Base Sepolia…
+              </div>
+            )}
+
+            {!liveLoading && liveAttestations.length > 0 && (
+              <div style={{ marginBottom: '48px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                  <h2 style={{
+                    fontFamily: 'DM Serif Display, Georgia, serif',
+                    fontSize: '24px',
+                    color: 'var(--text-primary)',
+                    margin: 0,
+                  }}>
+                    ⛓️ Live Attestations
+                  </h2>
+                  <span style={{
+                    fontFamily: 'Nunito',
+                    fontSize: '12px',
+                    color: '#06D6A0',
+                    background: 'rgba(6, 214, 160, 0.1)',
+                    padding: '4px 12px',
+                    borderRadius: '100px',
+                    border: '1px solid rgba(6, 214, 160, 0.2)',
+                  }}>
+                    Base Sepolia
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {liveAttestations.map((att) => (
+                    <div key={att.uid} style={{
+                      padding: '20px',
+                      borderRadius: '16px',
+                      background: 'white',
+                      border: '1px solid rgba(6, 214, 160, 0.2)',
+                      boxShadow: '0 2px 8px rgba(6, 214, 160, 0.06)',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                          <div style={{ fontFamily: 'monospace', fontSize: '12px', color: 'var(--text-muted)' }}>
+                            From: {shortAddress(att.attester)}
+                          </div>
+                          <div style={{ fontFamily: 'monospace', fontSize: '12px', color: 'var(--text-muted)' }}>
+                            To: {shortAddress(att.recipient)}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          {att.category && (
+                            <span style={{
+                              fontFamily: 'Nunito',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              color: 'var(--orange-primary)',
+                              background: 'var(--orange-ultralight)',
+                              padding: '3px 10px',
+                              borderRadius: '100px',
+                            }}>
+                              {att.category}
+                            </span>
+                          )}
+                          {att.bilateral && (
+                            <span style={{
+                              fontFamily: 'Nunito',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              color: '#06D6A0',
+                              background: 'rgba(6, 214, 160, 0.1)',
+                              padding: '3px 10px',
+                              borderRadius: '100px',
+                            }}>
+                              🤝 Bilateral
+                            </span>
+                          )}
+                          <span style={{ fontFamily: 'Nunito', fontSize: '12px', color: 'var(--text-muted)' }}>
+                            {timeAgo(att.time)}
+                          </span>
+                        </div>
+                      </div>
+                      {att.description && (
+                        <p style={{
+                          fontFamily: 'Nunito',
+                          fontSize: '14px',
+                          color: 'var(--text-secondary)',
+                          lineHeight: '1.6',
+                          margin: '0 0 12px 0',
+                        }}>
+                          {att.description}
+                        </p>
+                      )}
+                      <a
+                        href={`${BASE_SEPOLIA_EXPLORER}/tx/${att.txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontFamily: 'monospace',
+                          fontSize: '11px',
+                          color: 'var(--text-muted)',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        tx: {att.txHash?.slice(0, 20)}… ↗
+                      </a>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Divider */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '40px 0 32px' }}>
+                  <div style={{ flex: 1, height: '1px', background: 'var(--warm-gray)' }} />
+                  <span style={{ fontFamily: 'Nunito', fontSize: '13px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                    Seed Attestations
+                  </span>
+                  <div style={{ flex: 1, height: '1px', background: 'var(--warm-gray)' }} />
+                </div>
+              </div>
+            )}
+
             {/* Search + filters */}
             <div style={{
               display: 'flex',
