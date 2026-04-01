@@ -1,26 +1,185 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,500&display=swap');
+
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Headspace-inspired palette */
+  --orange-primary: #F47D31;
+  --orange-light: #FFB88C;
+  --orange-ultralight: #FFF5ED;
+  --yellow: #FFD166;
+  --coral: #EF476F;
+  --teal: #06D6A0;
+  --lavender: #C3B1E1;
+  --blue-primary: #2B2D42;
+  --cream: #FFFAF0;
+  --warm-gray: #F0EDE8;
+  --text-primary: #2B2D42;
+  --text-secondary: #6B6E8A;
+  --text-muted: #A0A3BD;
+  --bg-base: #FFFAF0;
+  --bg-card: #FFFFFF;
+  --card-radius: 20px;
+  --button-radius: 28px;
+
+  /* Care score colors */
+  --score-a: #06D6A0;
+  --score-b: #0EA5E9;
+  --score-c: #FFD166;
+  --score-d: #F47D31;
+  --score-f: #EF476F;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  line-height: 1.2;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--warm-gray);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--orange-light);
+  border-radius: 100px;
+}
+
+/* Floating card effect */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--card-radius);
+  box-shadow: 0 8px 24px rgba(43, 45, 66, 0.08);
+  transition: transform 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              box-shadow 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(43, 45, 66, 0.12);
+}
+
+/* CTA button */
+.btn-primary {
+  height: 52px;
+  padding: 0 32px;
+  border-radius: 28px;
+  background: var(--orange-primary);
+  color: white;
+  font-family: 'Nunito', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(244, 125, 49, 0.3);
+  transition: all 200ms ease;
+  text-decoration: none;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(244, 125, 49, 0.4);
+}
+
+.btn-secondary {
+  height: 52px;
+  padding: 0 32px;
+  border-radius: 28px;
+  background: transparent;
+  color: var(--orange-primary);
+  font-family: 'Nunito', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  border: 2px solid var(--orange-primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 200ms ease;
+  text-decoration: none;
+}
+
+.btn-secondary:hover {
+  background: var(--orange-ultralight);
+  transform: translateY(-1px);
+}
+
+/* Pill badge */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Nunito', sans-serif;
+  letter-spacing: 0.03em;
+}
+
+/* Section spacing */
+.section {
+  padding: 80px 0;
+}
+
+/* Max width container */
+.container {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Fade in animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* Breathing pulse for stats */
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+/* Score ring animation */
+@keyframes drawRing {
+  from { stroke-dashoffset: 314; }
+  to { stroke-dashoffset: var(--ring-offset); }
+}
+
+.score-ring circle.fill {
+  animation: drawRing 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  animation-delay: 0.3s;
 }
