@@ -9,6 +9,7 @@ import {
   Category,
 } from '@/lib/mock-data';
 import { fetchAttestationsForAddress, CARE_SCHEMA_UID, BASE_SEPOLIA_EXPLORER, ParsedCareAttestation } from '@/lib/eas';
+import ImpactNarrative from '@/components/ImpactNarrative';
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -394,6 +395,23 @@ export default async function ProfilePage({ params }: PageProps) {
             </div>
           </div>
         )}
+
+        {/* Impact Narrative */}
+        <ImpactNarrative
+          attestations={[
+            ...allMockAttestations.map(a => ({
+              category: a.category,
+              description: a.description,
+              date: a.date,
+            })),
+            ...liveAttestations.map(a => ({
+              category: a.category,
+              description: a.description,
+              date: new Date(a.time * 1000).toISOString().split('T')[0],
+            })),
+          ]}
+          name={profile.name}
+        />
 
         {/* Mock attestation history */}
         <div>

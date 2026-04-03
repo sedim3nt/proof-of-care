@@ -7,6 +7,7 @@ import { useAccount, useWalletClient } from 'wagmi';
 import { EAS, SchemaEncoder } from '@ethereum-attestation-service/eas-sdk';
 import { ethers } from 'ethers';
 import { CATEGORIES, CATEGORY_EMOJI, Category } from '@/lib/mock-data';
+import WitnessAssist from '@/components/WitnessAssist';
 import { EAS_CONTRACT_ADDRESS, CARE_SCHEMA_UID, BASE_SEPOLIA_EXPLORER, CARE_SCHEMA_STRING } from '@/lib/eas';
 
 const MAX_CHARS = 280;
@@ -198,6 +199,16 @@ export default function AttestPage() {
           }}>
             Record someone&apos;s care on Base Sepolia. Takes 2 minutes. Costs pennies in ETH.
           </p>
+        </div>
+
+        {/* AI Assist */}
+        <div style={{ marginBottom: '24px' }}>
+          <WitnessAssist
+            onStructured={(data) => {
+              setCategory(data.category);
+              setDescription(data.description);
+            }}
+          />
         </div>
 
         <form onSubmit={handleSubmit}>
